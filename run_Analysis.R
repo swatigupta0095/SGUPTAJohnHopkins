@@ -5,68 +5,59 @@
 
 setwd('C:\Users\Swati\Downloads\getdata_projectfiles_UCI HAR Dataset\UCI HAR Dataset');
 
+####Including Liraries#######
 
-features = read.table('./features.txt',header=FALSE); 
-activityType = read.table('./activity_labels.txt',header=FALSE); 
-subjectTrain = read.table('./train/subject_train.txt',header=FALSE); 
-xTrain = read.table('./train/x_train.txt',header=FALSE); 
-yTrain = read.table('./train/y_train.txt',header=FALSE); 
+library(plyr)
+library(reshape2)
 
-colnames(activityType) = c('activityId','activityType');
-colnames(subjectTrain) = "subjectId";
-colnames(xTrain) = features[,2];
-colnames(yTrain) = "activityId";
+####Initialising########
+activities<-read.table("./input/activity_labels.txt", colClasses=c("integer","character"),col.names=c("activityid","activityraw"))
+features<-read.table("./input/features.txt",colClasses=c("integer","character"),col.names=c("featureid","featureraw"))
 
-trainingData = cbind(yTrain,subjectTrain,xTrain);
+testsubjects<-read.table("./input/test/subject_test.txt", col.names=c("subject") )
+testlabels<-read.table("./input/test/y_test.txt", col.names=c("activityid") )
+testattributes<-read.table("./input/test/X_test.txt")
 
-subjectTest = read.table('./test/subject_test.txt',header=FALSE);
-xTest = read.table('./test/x_test.txt',header=FALSE); 
-yTest = read.table('./test/y_test.txt',header=FALSE); 
-
-
-colnames(subjectTest) = "subjectId";
-colnames(xTest) = features[,2];
-colnames(yTest) = "activityId";
-
-testData = cbind(yTest,subjectTest,xTest);
-finalData = rbind(trainingData,testData);
-colNames = colnames(finalData);
-
-logicalVector = (grepl("activity..",colNames) | grepl("subject..",colNames) | grepl("-mean..",colNames) & !grepl("-meanFreq..",colNames) & !grepl("mean..-",colNames) | grepl("-std..",colNames) & !grepl("-std()..-",colNames));
-
-finalData = finalData[logicalVector==TRUE];
-
-finalData = merge(finalData,activityType,by='activityId',all.x=TRUE);
-
-colNames = colnames(finalData);
+trainsubjects<-read.table("./input/train/subject_train.txt", col.names=c("subject") )
+trainlabels<-read.table("./input/train/y_train.txt", col.names=c("activityid") )
+trainattributes<-read.table("./input/train/X_train.txt")
 
 
-for (i in 1:length(colNames))
-{
-  colNames[i] = gsub("\\()","",colNames[i])
-  colNames[i] = gsub("-std$","StdDev",colNames[i])
-  colNames[i] = gsub("-mean","Mean",colNames[i])
-  colNames[i] = gsub("^(t)","time",colNames[i])
-  colNames[i] = gsub("^(f)","freq",colNames[i])
-  colNames[i] = gsub("([Gg]ravity)","Gravity",colNames[i])
-  colNames[i] = gsub("([Bb]ody[Bb]ody|[Bb]ody)","Body",colNames[i])
-  colNames[i] = gsub("[Gg]yro","Gyro",colNames[i])
-  colNames[i] = gsub("AccMag","AccMagnitude",colNames[i])
-  colNames[i] = gsub("([Bb]odyaccjerkmag)","BodyAccJerkMagnitude",colNames[i])
-  colNames[i] = gsub("JerkMag","JerkMagnitude",colNames[i])
-  colNames[i] = gsub("GyroMag","GyroMagnitude",colNames[i])
-};
+subjects<-rbind(testsubjects,trainsubjects)
+labels<-rbind(testlabels,trainlabels)
+attributes<-rbind(testattributes,trainattributes)
 
 
-colnames(finalData) = colNames;
+
+activities$activityclean<-gsub("_","",tolower(activities$activityraw))
 
 
-finalDataNoActivityType = finalData[,names(finalData) != 'activityType'];
+labels$activity <- activities[labels$activityid,"activityclean"]
 
 
-tidyData = aggregate(finalDataNoActivityType[,names(finalDataNoActivityType) != c('activityId','subjectId')],by=list(activityId=finalDataNoActivityType$activityId,subjectId = finalDataNoActivityType$subjectId),mean);
+features$featureclean <- gsub(",|-|\\(|\\)","",tolower(features$featureraw) )
 
 
-tidyData = merge(tidyData,activityType,by='activityId',all.x=TRUE);
 
-write.table(tidyData, './tidyData.txt',row.names=TRUE,sep='\t');
+features$ismeanorstd <- grepl("mean\\(\\)|std\\(\\)", features$featureraw )
+selectedfeatures <- which(features$ismeanorstd)
+
+
+
+tidydataset1<-cbind(subjects, labels[,"activity"],attributes[selectedfeatures] )
+names(tidydataset1)<-c("subject","activity", features$featureclean[selectedfeatures] )
+
+write.table(tidydataset1, "tidydataset1.txt", row.names = FALSE)
+
+
+longformat <- melt(tidydataset1, id=c("subject", "activity"))
+
+means <- ddply(longformat, .(subject, activity, variable), summarize, value = mean(value))
+
+tidyDataSet <- dcast(means, subject + activity ~ variable)
+
+write.table(tidyDataSet, "tidyData.txt", row.names = FALSE) 
+
+
+######END##############################################
+
