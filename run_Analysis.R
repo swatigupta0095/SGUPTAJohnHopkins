@@ -3,11 +3,6 @@
 #Swati Gupta
 ##########################################################################################################
 
-
-
-rm(list=ls())
-
-
 setwd('C:\Users\Swati\Downloads\getdata_projectfiles_UCI HAR Dataset\UCI HAR Dataset');
 
 
@@ -17,12 +12,10 @@ subjectTrain = read.table('./train/subject_train.txt',header=FALSE);
 xTrain = read.table('./train/x_train.txt',header=FALSE); 
 yTrain = read.table('./train/y_train.txt',header=FALSE); 
 
-
 colnames(activityType) = c('activityId','activityType');
 colnames(subjectTrain) = "subjectId";
 colnames(xTrain) = features[,2];
 colnames(yTrain) = "activityId";
-
 
 trainingData = cbind(yTrain,subjectTrain,xTrain);
 
@@ -35,20 +28,11 @@ colnames(subjectTest) = "subjectId";
 colnames(xTest) = features[,2];
 colnames(yTest) = "activityId";
 
-
-
 testData = cbind(yTest,subjectTest,xTest);
-
-
-
 finalData = rbind(trainingData,testData);
-
-
 colNames = colnames(finalData);
 
-
 logicalVector = (grepl("activity..",colNames) | grepl("subject..",colNames) | grepl("-mean..",colNames) & !grepl("-meanFreq..",colNames) & !grepl("mean..-",colNames) | grepl("-std..",colNames) & !grepl("-std()..-",colNames));
-
 
 finalData = finalData[logicalVector==TRUE];
 
